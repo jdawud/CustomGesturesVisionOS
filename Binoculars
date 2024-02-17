@@ -1,0 +1,72 @@
+/// The "Binoculars" cutom gesture for visionOS
+/// Created by Junaid Dawud
+/// Use as is or modify
+/// The "Binoculars" gesture is formed by placing the thumb tips and index finger tips together to form two touching loops.
+
+func computeTransformForUserPerformedBinocularsGesture() -> simd_float4x4? {
+        guard let leftHandAnchor = latestHandTracking.left,
+              let rightHandAnchor = latestHandTracking.right,
+              leftHandAnchor.isTracked, rightHandAnchor.isTracked else {
+            return nil
+        }
+
+        guard let leftHandThumbKnuckle = leftHandAnchor.handSkeleton?.joint(.thumbKnuckle),
+              let leftHandIndexKnuckle = leftHandAnchor.handSkeleton?.joint(.indexFingerKnuckle),
+              let rightHandThumbKnuckle = rightHandAnchor.handSkeleton?.joint(.thumbKnuckle),
+              let rightHandIndexKnuckle = rightHandAnchor.handSkeleton?.joint(.indexFingerKnuckle),
+              let leftHandThumbTip = leftHandAnchor.handSkeleton?.joint(.thumbTip),
+              let leftHandIndexTip = leftHandAnchor.handSkeleton?.joint(.indexFingerTip),
+              let rightHandThumbTip = rightHandAnchor.handSkeleton?.joint(.thumbTip),
+              let rightHandIndexTip = rightHandAnchor.handSkeleton?.joint(.indexFingerTip),
+              leftHandThumbKnuckle.isTracked && leftHandIndexKnuckle.isTracked &&
+              rightHandThumbKnuckle.isTracked && rightHandIndexKnuckle.isTracked &&
+              leftHandThumbTip.isTracked && leftHandIndexTip.isTracked &&
+              rightHandThumbTip.isTracked && rightHandIndexTip.isTracked else {
+            return nil
+        }
+
+        //  Calculating world positions
+        let originFromLeftThumbKnuckle = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftHandThumbKnuckle.anchorFromJointTransform).columns.3.xyz
+        let originFromRightThumbKnuckle = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightHandThumbKnuckle.anchorFromJointTransform).columns.3.xyz
+        let originFromLeftIndexKnuckle = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftHandIndexKnuckle.anchorFromJointTransform).columns.3.xyz
+        let originFromRightIndexKnuckle = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightHandIndexKnuckle.anchorFromJointTransform).columns.3.xyz
+        
+        let originFromLeftThumbTip = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftHandThumbTip.anchorFromJointTransform).columns.3.xyz
+        let originFromLeftIndexTip = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftHandIndexTip.anchorFromJointTransform).columns.3.xyz
+        let originFromRightThumbTip = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightHandThumbTip.anchorFromJointTransform).columns.3.xyz
+        let originFromRightIndexTip = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightHandIndexTip.anchorFromJointTransform).columns.3.xyz
+
+        // Checking if the tips of the index fingers and thumbs are close enough together
+        let thumbTipsDistance = distance(originFromLeftThumbTip, originFromRightThumbTip)
+        let indexTipsDistance = distance(originFromLeftIndexTip, originFromRightIndexTip)
+        let leftTipDistance = distance(originFromLeftThumbTip, originFromLeftIndexTip)
+        let rightTipDistance = distance(originFromRightThumbTip, originFromRightIndexTip)
+
+        // Defining a small threshold for how close the tips need to be (in meters)
+        let proximityThreshold: Float = 0.015 // Adjust based on your needs
+
+        guard thumbTipsDistance < proximityThreshold, indexTipsDistance < proximityThreshold,
+              leftTipDistance < proximityThreshold, rightTipDistance < proximityThreshold else {
+            return nil
+        }
+        
+        // Proceed with the original logic for defining axes and computing the transform
+        let xAxis = normalize(originFromRightThumbKnuckle - originFromLeftThumbKnuckle)
+        let leftYVector = normalize(originFromLeftIndexKnuckle - originFromLeftThumbKnuckle)
+        let rightYVector = normalize(originFromRightIndexKnuckle - originFromRightThumbKnuckle)
+        let yAxis = normalize((leftYVector + rightYVector) / 2.0)
+        let zAxis = cross(xAxis, yAxis)
+        let correctedYAxis = cross(zAxis, xAxis)
+
+        let midpoint = (originFromLeftThumbTip + originFromRightThumbTip + originFromLeftIndexTip + originFromRightIndexTip) / 4.0
+        
+        // Create the final transform
+        let transform = simd_matrix(
+            SIMD4(xAxis.x, xAxis.y, xAxis.z, 0),
+            SIMD4(correctedYAxis.x, correctedYAxis.y, correctedYAxis.z, 0),
+            SIMD4(zAxis.x, zAxis.y, zAxis.z, 0),
+            SIMD4(midpoint.x, midpoint.y, midpoint.z, 1)
+        )
+
+        return transform
+    }

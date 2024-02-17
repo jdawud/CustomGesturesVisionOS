@@ -1,0 +1,92 @@
+/// The "Shaka" cutom gesture for visionOS
+/// Created by Junaid Dawud
+/// Use as is or modify
+/// The "Shaka" gesture is formed by extending the thumb tips and little finger while the three middle fingers are closed similar to a fist. The gesture will be recognized for either hand.
+
+func computeTransformForUserPerformedShakaGesture() -> simd_float4x4? {
+        // Assumes `latestHandTracking` and `HandAnchor` are already defined elsewhere
+        guard let leftHandAnchor = latestHandTracking.left,
+              let rightHandAnchor = latestHandTracking.right else {
+            return nil
+        }
+
+        // A function to compute the transform for a single hand
+        func computeTransformForHand(_ handAnchor: HandAnchor, isLeftHand: Bool) -> simd_float4x4? {
+            
+            guard let wrist = handAnchor.handSkeleton?.joint(.wrist),
+                  
+                  let thumbTip = handAnchor.handSkeleton?.joint(.thumbTip),
+                  let littleTip = handAnchor.handSkeleton?.joint(.littleFingerTip),
+                  let indexTip = handAnchor.handSkeleton?.joint(.indexFingerTip),
+                  let middleTip = handAnchor.handSkeleton?.joint(.middleFingerTip),
+                  let ringTip = handAnchor.handSkeleton?.joint(.ringFingerTip),
+                  
+                  let thumbKnuckle = handAnchor.handSkeleton?.joint(.thumbKnuckle),
+                  let littleKnuckle = handAnchor.handSkeleton?.joint(.littleFingerKnuckle),
+                  let indexKnuckle = handAnchor.handSkeleton?.joint(.indexFingerKnuckle),
+                  let middleKnuckle = handAnchor.handSkeleton?.joint(.middleFingerKnuckle),
+                  let ringKnuckle = handAnchor.handSkeleton?.joint(.ringFingerKnuckle),
+                  
+                  let thumbMCP = handAnchor.handSkeleton?.joint(.thumbIntermediateTip),
+                  let middleMCP = handAnchor.handSkeleton?.joint(.middleFingerMetacarpal),
+                  let littleMCP = handAnchor.handSkeleton?.joint(.littleFingerMetacarpal)else {
+                return nil
+            }
+
+            // Compute positions
+            let wristPosition = matrix_multiply(handAnchor.originFromAnchorTransform, wrist.anchorFromJointTransform).columns.3.xyz
+            
+            let thumbTipPosition = matrix_multiply(handAnchor.originFromAnchorTransform, thumbTip.anchorFromJointTransform).columns.3.xyz
+            let littleTipPosition = matrix_multiply(handAnchor.originFromAnchorTransform, littleTip.anchorFromJointTransform).columns.3.xyz
+            let indexTipPosition = matrix_multiply(handAnchor.originFromAnchorTransform, indexTip.anchorFromJointTransform).columns.3.xyz
+            let middleTipPosition = matrix_multiply(handAnchor.originFromAnchorTransform, middleTip.anchorFromJointTransform).columns.3.xyz
+            let ringTipPosition = matrix_multiply(handAnchor.originFromAnchorTransform, ringTip.anchorFromJointTransform).columns.3.xyz
+            
+            let thumbKnucklePosition = matrix_multiply(handAnchor.originFromAnchorTransform, thumbKnuckle.anchorFromJointTransform).columns.3.xyz
+            let littleKnucklePosition = matrix_multiply(handAnchor.originFromAnchorTransform, littleKnuckle.anchorFromJointTransform).columns.3.xyz
+            let indexKnucklePosition = matrix_multiply(handAnchor.originFromAnchorTransform, indexKnuckle.anchorFromJointTransform).columns.3.xyz
+            let middleKnucklePosition = matrix_multiply(handAnchor.originFromAnchorTransform, middleKnuckle.anchorFromJointTransform).columns.3.xyz
+            let ringKnucklePosition = matrix_multiply(handAnchor.originFromAnchorTransform, ringKnuckle.anchorFromJointTransform).columns.3.xyz
+            
+            let thumbMCPPosition = matrix_multiply(handAnchor.originFromAnchorTransform, thumbMCP.anchorFromJointTransform).columns.3.xyz
+            let littleMCPPosition = matrix_multiply(handAnchor.originFromAnchorTransform, littleMCP.anchorFromJointTransform).columns.3.xyz
+            let middleMCPPosition = matrix_multiply(handAnchor.originFromAnchorTransform, middleMCP.anchorFromJointTransform).columns.3.xyz
+
+            // Check if Index, Middle, and Ring fingers are curled
+            let indexCurled = distance(indexTipPosition, wristPosition) < distance(indexKnucklePosition, wristPosition)
+            let middleCurled = distance(middleTipPosition, wristPosition) < distance(middleKnucklePosition, wristPosition)
+            let ringCurled = distance(ringTipPosition, wristPosition) < distance(ringKnucklePosition, wristPosition)
+
+            // Check if Thumb and Little finger are extended
+            let thumbAndLittleExtended = distance(thumbTipPosition, littleTipPosition) > distance(thumbKnucklePosition, littleKnucklePosition)
+        
+            if thumbAndLittleExtended && indexCurled && middleCurled && ringCurled {
+                
+                var xAxis = normalize(littleMCPPosition - thumbMCPPosition)
+                
+                if isLeftHand {
+                    xAxis = -xAxis // This inverts the direction of the xAxis for the left hand so that the beam always originates from the palm.
+                }
+                
+                let yAxis = normalize(middleMCPPosition - wristPosition)
+                let zAxis = cross(xAxis, yAxis)
+
+                let gestureMidpoint = (thumbTipPosition + littleTipPosition) / 2.0
+                return simd_matrix(
+                    SIMD4(xAxis, 0),
+                    SIMD4(yAxis, 0),
+                    SIMD4(zAxis, 0),
+                    SIMD4(gestureMidpoint, 1)
+                )
+            } else {
+                return nil
+            }
+        }
+        
+        // Compute the transform for each hand, passing an additional parameter to indicate the hand
+        let leftHandTransform = computeTransformForHand(leftHandAnchor, isLeftHand: true)
+        let rightHandTransform = computeTransformForHand(rightHandAnchor, isLeftHand: false)
+
+        // Return the first valid transform found
+        return leftHandTransform ?? rightHandTransform
+    }

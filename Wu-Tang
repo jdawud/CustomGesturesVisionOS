@@ -1,0 +1,146 @@
+/// The "Wu-Tang" cutom gesture for visionOS
+/// Created by Junaid Dawud
+/// Use as is or modify
+/// The "Wu-Tang" gesture is formed by... wait, you should just know this.
+
+
+
+func computeTransformForUserPerformedWuTangGesture() -> simd_float4x4? {
+        // Ensure both hands are tracked
+        guard let leftHandAnchor = latestHandTracking.left,
+              let rightHandAnchor = latestHandTracking.right,
+              leftHandAnchor.isTracked, rightHandAnchor.isTracked else {
+            return nil
+        }
+
+        // Extract the necessary joint information for both hands
+        guard let leftThumbTip = leftHandAnchor.handSkeleton?.joint(.thumbTip),
+              let rightThumbTip = rightHandAnchor.handSkeleton?.joint(.thumbTip),
+              // Fingertips
+              let leftIndexTip = leftHandAnchor.handSkeleton?.joint(.indexFingerTip),
+              let leftMiddleTip = leftHandAnchor.handSkeleton?.joint(.middleFingerTip),
+              let leftRingTip = leftHandAnchor.handSkeleton?.joint(.ringFingerTip),
+              let leftLittleTip = leftHandAnchor.handSkeleton?.joint(.littleFingerTip),
+              let rightIndexTip = rightHandAnchor.handSkeleton?.joint(.indexFingerTip),
+              let rightMiddleTip = rightHandAnchor.handSkeleton?.joint(.middleFingerTip),
+              let rightRingTip = rightHandAnchor.handSkeleton?.joint(.ringFingerTip),
+              let rightLittleTip = rightHandAnchor.handSkeleton?.joint(.littleFingerTip),
+              
+              // MCP joints
+              let leftThumbMCP = leftHandAnchor.handSkeleton?.joint(.thumbIntermediateTip),
+              let rightThumbMCP = rightHandAnchor.handSkeleton?.joint(.thumbIntermediateTip),
+              let leftIndexMCP = leftHandAnchor.handSkeleton?.joint(.indexFingerMetacarpal),
+              let leftMiddleMCP = leftHandAnchor.handSkeleton?.joint(.middleFingerMetacarpal),
+              let leftRingMCP = leftHandAnchor.handSkeleton?.joint(.ringFingerMetacarpal),
+              let leftLittleMCP = leftHandAnchor.handSkeleton?.joint(.littleFingerMetacarpal),
+              let rightIndexMCP = rightHandAnchor.handSkeleton?.joint(.indexFingerMetacarpal),
+              let rightMiddleMCP = rightHandAnchor.handSkeleton?.joint(.middleFingerMetacarpal),
+              let rightRingMCP = rightHandAnchor.handSkeleton?.joint(.ringFingerMetacarpal),
+              let rightLittleMCP = rightHandAnchor.handSkeleton?.joint(.littleFingerMetacarpal),
+              
+                // DIP joints
+              let leftIndexDIP = leftHandAnchor.handSkeleton?.joint(.indexFingerKnuckle),
+              let leftMiddleDIP = leftHandAnchor.handSkeleton?.joint(.middleFingerKnuckle),
+              let leftRingDIP = leftHandAnchor.handSkeleton?.joint(.ringFingerKnuckle),
+              let leftLittleDIP = leftHandAnchor.handSkeleton?.joint(.littleFingerKnuckle),
+              let rightIndexDIP = rightHandAnchor.handSkeleton?.joint(.indexFingerKnuckle),
+              let rightMiddleDIP = rightHandAnchor.handSkeleton?.joint(.middleFingerKnuckle),
+              let rightRingDIP = rightHandAnchor.handSkeleton?.joint(.ringFingerKnuckle),
+              let rightLittleDIP = rightHandAnchor.handSkeleton?.joint(.littleFingerKnuckle) else {
+            return nil
+        }
+
+        // Compute positions
+        // MCPs Pos
+        let leftThumbMCPPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftThumbMCP.anchorFromJointTransform).columns.3.xyz
+        let rightThumbMCPPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightThumbMCP.anchorFromJointTransform).columns.3.xyz
+        
+        let leftIndexMCPPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftIndexMCP.anchorFromJointTransform).columns.3.xyz
+        let rightIndexMCPPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightIndexMCP.anchorFromJointTransform).columns.3.xyz
+        
+        let leftMiddleMCPPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftMiddleMCP.anchorFromJointTransform).columns.3.xyz
+        let rightMiddleMCPPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightMiddleMCP.anchorFromJointTransform).columns.3.xyz
+        
+        let leftRingMCPPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftRingMCP.anchorFromJointTransform).columns.3.xyz
+        let rightRingMCPPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightRingMCP.anchorFromJointTransform).columns.3.xyz
+
+        let leftLittleMCPPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftLittleMCP.anchorFromJointTransform).columns.3.xyz
+        let rightLittleMCPPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightLittleMCP.anchorFromJointTransform).columns.3.xyz
+
+        // DIPs Pos
+        let leftIndexDipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftIndexDIP.anchorFromJointTransform).columns.3.xyz
+        let rightIndexDipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightIndexDIP.anchorFromJointTransform).columns.3.xyz
+
+        let leftMiddleDipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftMiddleDIP.anchorFromJointTransform).columns.3.xyz
+        let rightMiddleDipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightMiddleDIP.anchorFromJointTransform).columns.3.xyz
+        
+        let leftRingDipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftRingDIP.anchorFromJointTransform).columns.3.xyz
+        let rightRingDipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightRingDIP.anchorFromJointTransform).columns.3.xyz
+
+        let leftLittleDipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftLittleDIP.anchorFromJointTransform).columns.3.xyz
+        let rightLittleDipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightLittleDIP.anchorFromJointTransform).columns.3.xyz
+
+        // Tips Pos
+        let leftThumbTipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftThumbTip.anchorFromJointTransform).columns.3.xyz
+        let rightThumbTipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightThumbTip.anchorFromJointTransform).columns.3.xyz
+        
+        let leftIndexTipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftIndexTip.anchorFromJointTransform).columns.3.xyz
+        let rightIndexTipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightIndexTip.anchorFromJointTransform).columns.3.xyz
+
+        let leftMiddleTipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftMiddleTip.anchorFromJointTransform).columns.3.xyz
+        let rightMiddleTipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightMiddleTip.anchorFromJointTransform).columns.3.xyz
+        
+        let leftRingTipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftRingTip.anchorFromJointTransform).columns.3.xyz
+        let rightRingTipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightRingTip.anchorFromJointTransform).columns.3.xyz
+
+        let leftLittleTipPos = matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftLittleTip.anchorFromJointTransform).columns.3.xyz
+        let rightLittleTipPos = matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightLittleTip.anchorFromJointTransform).columns.3.xyz
+
+        // Check if fingers are extended
+        let thumbMCPDistance = distance(matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftThumbMCP.anchorFromJointTransform).columns.3.xyz, matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightThumbMCP.anchorFromJointTransform).columns.3.xyz)
+        
+        let indexDIPDistance = distance(matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftIndexDIP.anchorFromJointTransform).columns.3.xyz, matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightIndexDIP.anchorFromJointTransform).columns.3.xyz)
+        
+        let middleDIPDistance = distance(matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftMiddleDIP.anchorFromJointTransform).columns.3.xyz, matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightMiddleDIP.anchorFromJointTransform).columns.3.xyz)
+        
+        let ringDIPDistance = distance(matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftRingDIP.anchorFromJointTransform).columns.3.xyz, matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightRingDIP.anchorFromJointTransform).columns.3.xyz)
+        
+        let littleDIPDistance = distance(matrix_multiply(leftHandAnchor.originFromAnchorTransform, leftLittleDIP.anchorFromJointTransform).columns.3.xyz, matrix_multiply(rightHandAnchor.originFromAnchorTransform, rightLittleDIP.anchorFromJointTransform).columns.3.xyz)
+
+        // Validate if fingers are extended to form a "W"
+        let indexFingerExtended = distance(leftIndexTipPos, leftIndexMCPPos) > 0.07 && distance(rightIndexTipPos, rightIndexMCPPos) > 0.07
+        let middleFingerExtended = distance(leftMiddleTipPos, leftMiddleMCPPos) > 0.07 && distance(rightMiddleTipPos, rightMiddleMCPPos) > 0.07
+        let ringFingerExtended = distance(leftRingTipPos, leftRingMCPPos) > 0.07 && distance(rightRingTipPos, rightRingMCPPos) > 0.07
+        let littleFingerExtended = distance(leftLittleTipPos, leftLittleMCPPos) > 0.07 && distance(rightLittleTipPos, rightLittleMCPPos) > 0.07
+
+        let fingersExtended = indexFingerExtended && middleFingerExtended && ringFingerExtended && littleFingerExtended
+
+        if !fingersExtended {
+            return nil
+        }
+
+        // Calculate the thumbs distance to verify they are touching
+        let thumbsDistance = distance(leftThumbTipPos, rightThumbTipPos)
+        if thumbsDistance >= 0.01 { 
+            return nil
+        }
+
+        // Define axes
+        let xAxis = normalize(rightIndexMCPPos - leftIndexMCPPos)
+        let averageIndexTipPos = (leftIndexTipPos + rightIndexTipPos) / 2.0
+        let averageThumbTipPos = (leftThumbTipPos + rightThumbTipPos) / 2.0
+        let yAxisDirection = averageIndexTipPos - averageThumbTipPos
+        let yAxis = normalize(yAxisDirection)
+
+        let zAxis = cross(xAxis, yAxis)
+
+        // Gesture's midpoint as the midpoint between the two thumbs
+        let gestureMidpoint = (leftThumbTipPos + rightThumbTipPos) / 2.0
+
+        return simd_matrix(
+            SIMD4(xAxis, 0),
+            SIMD4(yAxis, 0),
+            SIMD4(zAxis, 0),
+            SIMD4(gestureMidpoint.x, gestureMidpoint.y, gestureMidpoint.z, 1)
+        )
+    }
